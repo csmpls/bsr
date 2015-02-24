@@ -1,4 +1,3 @@
-
 import numpy as np
 import csv
 import time
@@ -108,18 +107,18 @@ class BSR():
 #        c = (count <= 5)*(lengths > 5)
 #        return unique[c]
 
+    def postToServer(self, route, json):
+        return requests.post(webserver + route, data=json, headers={'content-type': 'application/json'}) 
+
     def printWord(self,word):
-        '''
-        print "\n" * 10
-        print "\t" *5, "%s"%(word)
-        #print "\t  " *4, "(%.2f,%.0f)"%(self.currentEntropy,self.currentRate)
-        print "\n" * 10
         '''
         print "\n" * 5
         print "\t" *3, "%s"%(word)
         print "\t" *3, "(%.3f)"%(self.currentRate)
         print "\n" * 5
+        '''
 
+        self.postToServer('/show_word', json.dumps({'word': word}))
 
     def AR1(self,c=0.150,phi=0.075,sigma=0.001):
         return (1.) * self.currentRate + np.random.normal(scale=sigma)
@@ -230,6 +229,9 @@ class BSR():
         #    print "program terminated"
 
 if __name__ == '__main__':
+
+    global webserver
+    webserver = 'http://127.0.0.1:3000'
     
     global  bucketName
     bucketName = "brainspeedr"
