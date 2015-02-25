@@ -1,0 +1,48 @@
+<!doctype html>
+
+<head>
+  <style>
+    body {
+      background:#000;
+      color:#fff;
+      font-size: 14pt;
+    }
+    #wordContainer {
+      text-align:center;
+      padding-top: 50%;
+    }
+  </style>
+	<script src="/socket.io/socket.io.js"></script>
+	<script src="https://code.jquery.com/jquery-1.11.2.min.js"></script>
+	<script>
+
+	  var socket = io.connect()
+
+	  socket.on('new_word', function (data) {
+      set_word(data)
+	  })
+
+   	$(window).on('beforeunload', function(){
+      	socket.close()
+  	})
+
+	 function set_word(word) {
+      $('#wordContainer').html(strip_quotes(word))
+   }
+
+   function strip_quotes(word) {
+      return word.substring(1, word.length-1)
+   }
+
+	</script>
+</head>
+
+<body>
+
+<div id = "wordContainer">
+hello...........waiting to get a message
+</div>
+
+</body>
+
+</html>
