@@ -14,27 +14,8 @@
   </style>
 	<script src="/socket.io/socket.io.js"></script>
 	<script src="https://code.jquery.com/jquery-1.11.2.min.js"></script>
-	<script>
-
-	  var socket = io.connect()
-
-	  socket.on('new_word', function (data) {
-      set_word(data)
-	  })
-
-   	$(window).on('beforeunload', function(){
-      	socket.close()
-  	})
-
-	 function set_word(word) {
-      $('#wordContainer').html(strip_quotes(word))
-   }
-
-   function strip_quotes(word) {
-      return word.substring(1, word.length-1)
-   }
-
-	</script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/3.3.1/lodash.min.js"></script>
+	<script src="public/bsr-webify.js"> </script>
 </head>
 
 <body>
@@ -42,6 +23,8 @@
 <div id = "wordContainer">
 hello...........waiting to get a message
 </div>
+
+<div id = "questionsContainer"> </div>
 
 </body>
 
