@@ -24,6 +24,7 @@ function populate_articles_dropdown(article_titles) {
   })
 }
 
+// TODO: hide #selectArticle after the selection is made
 function sendArticle() {
 	articleTitle = $("#options").children("option").filter(":selected").text()
 	socket.emit('article_selection', articleTitle)
