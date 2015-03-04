@@ -12,6 +12,7 @@ import json
 import zlib
 import requests
 import os
+import sys
 
 
 def uplodJson(Json,textId,compress=False):
@@ -28,47 +29,12 @@ def uplodJson(Json,textId,compress=False):
     r = requests.put('http://brainspeedr.s3.amazonaws.com/bsr/%s/%s/%s.json%s'%(get_mac(),textId,now,extension), data=Json)
 
 
-def listArticles():
-    aDic = {}
-    listA = os.listdir("articles")
-    for i,article  in enumerate(listA):
-        #print i,article
-        J = json.loads(open("articles/" + article,'rb').read())
-        aDic[i+1] = J
-        print "%s. %s by %s (%s)\n"%(i+1,J['title'],J['author'],J['url'])
-    return aDic
-    
-def selectArticles():        
-        aDic = listArticles()
-        print "choose one of the articles above (%s to %s):"%(1,len(aDic))
-        
-        #recentTexts = np.array([r for r in csv.reader(open("recentTexts.csv",'rb'))])
-        #print "\n"*30
-        #print "choose one of the text below by entering a number or paste URL:"
-        #if len(recentTexts)>0:
-        #    for r,rx in enumerate(recentTexts[-10:]):
-        #        print '%s) %s '%(r+1,rx[0])
-        #else:
-        #    print "no recent text available"
-        
-        input = int(raw_input("\nChoice : ")) 
-        cond = input < 1 or input > len(aDic)
-        
-        while cond:
-            print "incorrect choice, try again:"
-            input = int(raw_input("\nChoice : "))
-            cond = input < 1 or input > len(aDic)
-           
-        
-        print "your choice : %s by %s (%s) \nlet's get started..."%(aDic[input]['title'],aDic[input]['author'],aDic[input]['url'])
-        return aDic[input]
-
+def selectArticle(path):
+    print path
+    return json.loads(open(path,'rb').read())
 
 #def AR1(c=150,phi=0.5,sigma=1):    
 #    return c + phi * self.currentRate + np.random.normal(scale=sigma)
-
-
-
 
 
         
@@ -110,20 +76,12 @@ class BSR():
     def postToServer(self, route, json):
         return requests.post(webserver + route, data=json, headers={'content-type': 'application/json'}) 
 
-    def printWord(self,word):
-        '''
-        print "\n" * 5
-        print "\t" *3, "%s"%(word)
-        print "\t" *3, "(%.3f)"%(self.currentRate)
-        print "\n" * 5
-        '''
-
+    def sendWord(self,word):
         self.postToServer('/show_word', json.dumps({'word': word}))
 
     def AR1(self,c=0.150,phi=0.075,sigma=0.001):
         return (1.) * self.currentRate + np.random.normal(scale=sigma)
         
-
     def updateRate(self,treatment):
         if treatment=="bsr":
             return self.currentRate*(1 + (self.adaptivity*self.currentEntropy))
@@ -131,7 +89,6 @@ class BSR():
             return self.AR1()
         else:
             return self.currentRate
-
 
     def showWords(self,articleJson,treatment):
         txt = articleJson['content']
@@ -142,25 +99,30 @@ class BSR():
             self.currentRate = self.updateRate(treatment)
             
             if word[-1] in [",","-"]:
-                self.printWord(word)
+                self.sendWord(word)
                 time.sleep(self.currentRate*1.5)
             elif word[-1] in [".",";",":"]:
-                self.printWord(word)
+                self.sendWord(word)
                 time.sleep(self.currentRate*3)
             elif word[-1]=="|":
-                self.printWord(word[:-1])
+                self.sendWord(word[:-1])
                 time.sleep(self.currentRate*4)
             else:
-                self.printWord(word)
+                self.sendWord(word)
                 time.sleep(self.currentRate)
 
-    
+    def generateQuestions(self,articleJson):
+        return [{'question':'Please tell us briefly about the article you have just read.', 'type':'free_response'},
+        {'question':'Can you remember people, places, organizations and institutions mentioned in the article? (List one per line).', 'type':'free_recall'},
+        {'question':'Which of these words appeared in the text?', 'type':'multiple_choice', 'choices':['Tel Aviv', 'Neurosky', 'UIST']}]
 
-    def experiment(self):
-        articleJson = selectArticles()
-        self.showWords(articleJson,treatment)
+    def sendQuestions(self,questions):
+        self.postToServer('/show_questions', json.dumps(questions))
+
+    def experiment(self,articleJson):
+        # self.showWords(articleJson,treatment)
+        self.sendQuestions(self.generateQuestions(articleJson))
         
-    
     def readEEG(self):
         
         Median = []
@@ -200,12 +162,7 @@ class BSR():
                             self.entropy.append(compute_entropy(self.raw_log,1))
                         
                         self.normalized_entropy.append(normalize(self.entropy[-self.deque:])[-1])
-                        '''          
-                        print "raw values: median: %.2f (medianM = %.2f), std: %.2f (medianStd = %.2f) " %(Median[-1],np.median(Median[-100:]),Std[-1],np.median(Std[-100:]))                          
-                        print " entropy : %.3f (mean: %.3f, median: %.3f, std: %.3f)"%(self.entropy[-1],np.mean(self.entropy[-self.deque:]),np.median(self.entropy[-self.deque:]),np.std(self.entropy[-self.deque:]))
-                        print "normalized entropy: %.3f (mean: %.3f, std : %.3f)"%(self.normalized_entropy[-1],np.mean(self.normalized_entropy[-100:]),np.std(self.normalized_entropy[-100:]))
-                        print "\n"
-                        '''
+
                         self.currentEntropy = self.normalized_entropy[-1]
                         #print self.currentEntropy
                         self.raw_log = []
@@ -215,26 +172,23 @@ class BSR():
     
 
     
-    def run(self):
-        #S3connectBucket(bucketName)
+    def run(self, articleJson):
         tEEG = threading.Thread(target=bsr.readEEG)
         tEEG.daemon = True
         tEEG.start()
         
-        #try:
-        
-        Json = bsr.experiment()
+        Json = bsr.experiment(articleJson)
         return Json
         #except:
         #    print "program terminated"
 
 if __name__ == '__main__':
 
+    article_selection = sys.argv[1]
+    condition_selection = sys.argv[2]
+    
     global webserver
     webserver = 'http://127.0.0.1:3000'
-    
-    global  bucketName
-    bucketName = "brainspeedr"
     
     global onText    
     global questions
@@ -243,12 +197,12 @@ if __name__ == '__main__':
     global Json
         
     global treatment
-    treatment = "constant"
+    treatment = condition_selection
     
     bsr = BSR()
     #bsr.readEEG()
     
-    Json = bsr.run()
+    Json = bsr.run(selectArticle(article_selection))
 #    '''
     
         #print bsr.onText

@@ -4,7 +4,7 @@ var server = require('http').Server(app);
 var io = require('socket.io')(server);
 var fs = require('fs')
 var _ = require('lodash')
-
+var exec = require('exec');
 var bodyParser = require('body-parser')
 
 app.use("/public", express.static(__dirname + '/public'))
@@ -28,8 +28,8 @@ app.post('/show_word', function (req, res) {
 
 // accepts json {'questions': [{'question': }, .. ]}
 app.post('/show_questions', function (req, res) {
-  console.log("questions: " + JSON.stringify(req.body['questions']))
-  io.sockets.emit('show_questions', JSON.stringify(req.body['questions']))
+  console.log("questions: " + JSON.stringify(req.body))
+  io.sockets.emit('show_questions', JSON.stringify(req.body))
   res.send('Got a POST request');
 })
 
@@ -38,12 +38,25 @@ io.on('connection', function (socket) {
   console.log('connected to client socket')
   io.sockets.emit('articles_list', getArticleTitles()) 
 
+  socket.on('articles_please', function() {
+    socket.emit('articles_list', getArticleTitles())
+  })
+
+
+  // this is where we run the python script
   socket.on('article_selection', function(data) {
     article_title = data
     article = _.filter(articlesJson, function(article) {
       return article.title === article_title
-    })
-    console.log(article)  // todo: execute the python script with the article path as an argument
+    })[0]
+    // execute the python script with the article path + the condition as arguments
+    console.log(article.path)
+    exec(['python', 'bsr.py',article.path, getCondition()], function(err, out, code) {
+      if (err instanceof Error)
+        throw err;
+      process.stderr.write(err);
+      process.stdout.write(out);
+    });
   })
 
 });
@@ -55,6 +68,10 @@ server.listen(3000, function () {
   console.log('Example app listening at http://%s:%s', host, port)
 })
 
+function getCondition() {
+  //TODO: return 'bsr' or 'AR'
+  return 'constant'
+}
 
 function getArticleTitles() {
   return _.map(articlesJson, function(article) {
