@@ -14,14 +14,14 @@ The following packages are required to run ***bsr*** :
 * [numpy](https://pypi.python.org/pypi/numpy)
 * [stemming](https://pypi.python.org/pypi/stemming/1.0)
 * [boto](https://pypi.python.org/pypi/boto/)
+* npm + node
 
 ###Instructions:
 0. make sure you've installed both python and [pip](https://pypi.python.org/pypi/pip)
 1. `sudo pip install beautifulsoup4 readability-lxml numpy stemming boto`
-2. open a new Terminal window, expand it to 2/3 of the screen, and change the font size to minimum 36pt.
-2. connect your mindwave mobile
-3. `python bsr.py`
-4. If necessary, adjust the font size and police, and Terminal window size. 
+2. `npm install`
+3. `node webserver.js`
+4. point your browser to localhost:3000
 
 ###Supported configuration
 ***bsr*** has been tested with the following configuration, so far: 
